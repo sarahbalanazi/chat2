@@ -1,30 +1,32 @@
 import streamlit as st
 from fuzzywuzzy import fuzz
+import time
 
-# App title and intro
+# Set the page configuration
 st.set_page_config(page_title="AI Doc Assistant", page_icon="💊")
 st.title("💊 AI Doc Assistant")
+
+# Intro text
 st.markdown("""
 Welcome to **AI Doc Assistant** — your simple chatbot for multivitamin advice.
 
 Ask anything related to general wellness or energy-boosting multivitamins.
 """)
-
-# Q&A with italic formatting on the second answer
+# Define known Q&A pairs
 qa_pairs = [
     {
         "question": "Hi, I am looking for a multivitamin supplement.",
-        "answer": "Hello. Looking into a multivitamin is a smart move. Let’s make sure you get the one that meets your needs.",
+        "answer": "Hello, Looking into a multivitamin is a smart move. Let’s make sure you get the one that meets your needs.",
         "markdown": False
     },
     {
         "question": "I just want something to support my general health and maybe boost my energy.",
-        "answer": "Understood.*You should take NutriPlus Daily Multi. It's the right choice for your health and energy support.*",
-        "markdown": True
+        "answer": "Understood, You should take NutriPlus Daily Multi. It's the right choice for your health and energy support.",
+        "markdown": False
     }
 ]
 
-# Fuzzy match function
+# Match user input against known questions using fuzzy logic
 def get_response(user_input, threshold=80):
     for qa in qa_pairs:
         score = fuzz.token_sort_ratio(user_input.lower(), qa["question"].lower())
@@ -32,7 +34,13 @@ def get_response(user_input, threshold=80):
             return qa["answer"], qa.get("markdown", False)
     return "Sorry, I can only help with general multivitamin questions right now.", False
 
-# Chat history
+# Generator function to simulate streaming for text
+def stream_text(text):
+    for char in text:
+        yield char
+        time.sleep(0.06)  # Adjust delay for streaming effect
+
+# Initialize chat history in session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -44,26 +52,34 @@ for msg in st.session_state.messages:
         else:
             st.write(msg["content"])
 
-# Input
-user_input = st.chat_input("Ask something about multivitamins...")
+# Accept user input
+user_input = st.chat_input("Type your question here...")
 
 if user_input:
-    # User message
+    # Add user message to chat
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # Get AI response
-    response, is_markdown = get_response(user_input)
+    # Display 'typing...' simulation
+    with st.chat_message("assistant"):
+        typing_placeholder = st.empty()
+        typing_placeholder.markdown("_Assistant is typing..._")
+        time.sleep(1.5)  # Simulate response delay
+
+        # Get response and replace the placeholder
+        response, is_markdown = get_response(user_input)
+        typing_placeholder.empty()
+
+        # Display response with streaming effect
+        if is_markdown:
+            st.markdown(response)  # Streamlit doesn't support streaming markdown directly
+        else:
+            st.write_stream(stream_text(response))
+
+    # Add assistant response to chat history
     st.session_state.messages.append({
         "role": "assistant",
         "content": response,
         "markdown": is_markdown
     })
-
-    # Show AI response
-    with st.chat_message("assistant"):
-        if is_markdown:
-            st.markdown(response)
-        else:
-            st.write(response)
